@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "pystromligning"
+version = "0.1.0"
+description = "Library for communicating with the Stromligning API"
+authors = ["Malene Trab <malene@trab.dk>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+requests = "^2.32.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
