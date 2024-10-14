@@ -6,6 +6,7 @@ LAT = 56.46185623639339
 LON = 10.866395953404707
 
 strom = Stromligning(LAT, LON)
-companies = strom.get_companies()
+strom.set_company("norlys_flexel")
+strom.update()
 
 print(strom)
