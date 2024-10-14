@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import sys
-import threading
 from datetime import datetime, timezone
 from operator import itemgetter
 
@@ -51,9 +50,11 @@ class Stromligning:
 
     def _get_supplier(self) -> dict:
         """Get the supplier for the provided location."""
-        return (self._get_response(
-            f"/suppliers/find?lat={self._location['lat']}&long={self._location['lon']}"
-        ))[0]
+        return (
+            self._get_response(
+                f"/suppliers/find?lat={self._location['lat']}&long={self._location['lon']}"
+            )
+        )[0]
 
     def _get_companies(self) -> list:
         """Get a list of available electricity companies for the location."""
