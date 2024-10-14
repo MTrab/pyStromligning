@@ -77,16 +77,17 @@ class Stromligning:
 
         return sorted(company_list, key=itemgetter("name"))
 
-    def update(self) -> None:
+    def update(self, start: str = None) -> None:
         """Get current available prices."""
-        midnight = (
-            datetime.now()
-            .replace(hour=0, minute=0, second=0, microsecond=0)
-            .astimezone(timezone.utc)
-            .isoformat()
-        ).replace("+00:00", ".000Z")
+        if start is None:
+            start = (
+                datetime.now()
+                .replace(hour=0, minute=0, second=0, microsecond=0)
+                .astimezone(timezone.utc)
+                .isoformat()
+            ).replace("+00:00", ".000Z")
 
-        url = f"/prices?productId={self.company['id']}&supplierId={self.supplier['id']}&from={midnight}"
+        url = f"/prices?productId={self.company['id']}&supplierId={self.supplier['id']}&from={start}"
 
         price_list: list = []
         price_list_raw = sorted(
@@ -95,8 +96,8 @@ class Stromligning:
         )
 
         for price in price_list_raw:
-            date = datetime.fromisoformat(price["date"])
-            price["date"] = date
+            # date = datetime.fromisoformat(price["date"])
+            # price["date"] = date
             price_list.append(price)
 
         self.prices = price_list
