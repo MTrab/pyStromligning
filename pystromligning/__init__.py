@@ -27,17 +27,23 @@ class Stromligning:
     Results are electricity prices that takes into account the tariffs and other fees.
     """
 
-    def __init__(self, lat: float, lon: float) -> None:
+    def __init__(self) -> None:
         """Initialize the :class:Stromligning class and set default attribute values."""
         _LOGGER.debug("Initializing the pyStromligning library")
+        self._location: dict = {}
 
+        self.supplier: dict = {}
+        self.available_companies: list = []
+
+        self.prices: dict = {}
+        self.company: dict = {}
+
+    def set_location(self, lat: float, lon: float) -> None:
+        """Set location."""
         self._location: dict = {"lat": lat, "lon": lon}
 
         self.supplier = self._get_supplier()
         self.available_companies = self._get_companies()
-
-        self.prices: dict = {}
-        self.company: dict = {}
 
     def set_company(self, company_id: str) -> None:
         """Set the selected company."""
@@ -80,13 +86,11 @@ class Stromligning:
             .isoformat()
         ).replace("+00:00", ".000Z")
 
+        url = f"/prices?productId={self.company['id']}&supplierId={self.supplier['id']}&from={midnight}"
+
         price_list: list = []
         price_list_raw = sorted(
-            (
-                self._get_response(
-                    f"/prices?productId={self.company['id']}&supplierId={self.supplier['id']}&from={midnight}"
-                )
-            )["prices"],
+            (self._get_response(url))["prices"],
             key=itemgetter("date"),
         )
 
@@ -100,8 +104,7 @@ class Stromligning:
     def _get_response(self, path: str) -> dict:
         """Make the request to the API."""
 
-        response = requests.request(
-            "GET",
+        response = requests.get(
             f"{API_URL}{path}",
             timeout=60,
         )
