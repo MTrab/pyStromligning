@@ -1,6 +1,6 @@
 """Test file for the library."""
 
-from pyStromligning import Stromligning
+from pystromligning import Stromligning
 
 LAT = 56.46185623639339
 LON = 10.866395953404707
