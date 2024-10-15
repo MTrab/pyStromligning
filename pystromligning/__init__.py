@@ -96,8 +96,6 @@ class Stromligning:
         )
 
         for price in price_list_raw:
-            # date = datetime.fromisoformat(price["date"])
-            # price["date"] = date
             price_list.append(price)
 
         self.prices = price_list
