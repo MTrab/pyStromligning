@@ -77,7 +77,7 @@ class Stromligning:
 
         return sorted(company_list, key=itemgetter("name"))
 
-    def update(self, start: str = None) -> None:
+    def update(self, start:str=None) -> None:
         """Get current available prices."""
         if start is None:
             start = (
