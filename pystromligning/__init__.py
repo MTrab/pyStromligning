@@ -96,6 +96,9 @@ class Stromligning:
         )
 
         for price in price_list_raw:
+            if price in price_list:
+                continue
+            
             price_list.append(price)
 
         self.prices = price_list
