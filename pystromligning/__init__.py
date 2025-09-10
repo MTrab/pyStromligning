@@ -116,6 +116,8 @@ class Stromligning:
 
         url = f"/prices?productId={self.company['id']}&supplierId={self.supplier['id']}&from={start}&aggregation={self.aggregation}&forecast={str(self.forecast).lower()}"
 
+        _LOGGER.debug("Fetching prices from: %s", url)
+
         price_list: list = []
         price_list_raw = sorted(
             (self._get_response(url))["prices"],
