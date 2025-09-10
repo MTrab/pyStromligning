@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from enum import IntEnum
+
 import logging
 import sys
 from datetime import datetime, timezone
@@ -24,6 +24,15 @@ class Aggregation(str):
 
     MIN15 = "15m"
     HOUR = "1h"
+
+    @classmethod
+    def values(cls):
+        """Return a list of all aggregation levels dynamically."""
+        return [
+            value
+            for key, value in vars(cls).items()
+            if not key.startswith("__") and isinstance(value, str)
+        ]
 
 
 class Stromligning:
