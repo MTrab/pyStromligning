@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from enum import IntEnum
 import logging
 import sys
 from datetime import datetime, timezone
@@ -16,6 +17,13 @@ if sys.version_info < (3, 11, 0):
     sys.exit("The pyWorxcloud module requires Python 3.11.0 or later")
 
 _LOGGER = logging.getLogger(__name__)
+
+
+class Aggregation(str):
+    """Strømligning aggregation levels."""
+
+    MIN15 = "15m"
+    HOUR = "1h"
 
 
 class Stromligning:
@@ -37,6 +45,16 @@ class Stromligning:
 
         self.prices: dict = {}
         self.company: dict = {}
+        self.aggregation: str = Aggregation.HOUR
+        self.forecast: bool = False
+
+    def set_forecast(self, forecast: bool) -> None:
+        """Set if forecast prices should be used."""
+        self.forecast = forecast
+
+    def set_aggregation(self, aggregation: Aggregation) -> None:
+        """Set aggregation level."""
+        self.aggregation = aggregation
 
     def set_location(self, lat: float, lon: float) -> None:
         """Set location."""
@@ -77,7 +95,7 @@ class Stromligning:
 
         return sorted(company_list, key=itemgetter("name"))
 
-    def update(self, start:str=None) -> None:
+    def update(self, start: str | None = None) -> None:
         """Get current available prices."""
         if start is None:
             start = (
@@ -87,7 +105,7 @@ class Stromligning:
                 .isoformat()
             ).replace("+00:00", ".000Z")
 
-        url = f"/prices?productId={self.company['id']}&supplierId={self.supplier['id']}&from={start}"
+        url = f"/prices?productId={self.company['id']}&supplierId={self.supplier['id']}&from={start}&aggregation={self.aggregation}&forecast={str(self.forecast).lower()}"
 
         price_list: list = []
         price_list_raw = sorted(
@@ -98,7 +116,7 @@ class Stromligning:
         for price in price_list_raw:
             if price in price_list:
                 continue
-            
+
             price_list.append(price)
 
         self.prices = price_list
