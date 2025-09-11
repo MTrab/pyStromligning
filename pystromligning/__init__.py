@@ -114,7 +114,11 @@ class Stromligning:
                 .isoformat()
             ).replace("+00:00", ".000Z")
 
-        url = f"/prices?productId={self.company['id']}&supplierId={self.supplier['id']}&from={start}&aggregation={self.aggregation}&forecast={str(self.forecast).lower()}"
+        aggregation = ""
+        if self.aggregation != Aggregation.MIN15:
+            aggregation = "&aggregation=" + self.aggregation
+
+        url = f"/prices?productId={self.company['id']}&supplierId={self.supplier['id']}&from={start}{aggregation}&forecast={str(self.forecast).lower()}"
 
         _LOGGER.debug("Fetching prices from: %s", url)
 
