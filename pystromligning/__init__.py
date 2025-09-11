@@ -10,7 +10,7 @@ from operator import itemgetter
 
 import requests
 
-from .const import API_URL
+from .const import API_URL, DEV_API_URL
 from .exceptions import InvalidAPIResponse, TooManyRequests
 
 if sys.version_info < (3, 11, 0):
@@ -44,7 +44,7 @@ class Stromligning:
     Results are electricity prices that takes into account the tariffs and other fees.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, dev: bool = False) -> None:
         """Initialize the :class:Stromligning class and set default attribute values."""
         _LOGGER.debug("Initializing the pyStromligning library")
         self._location: dict = {}
@@ -52,10 +52,12 @@ class Stromligning:
         self.supplier: dict = {}
         self.available_companies: list = []
 
-        self.prices: dict = {}
+        self.prices: list = []
         self.company: dict = {}
         self.aggregation: str = Aggregation.HOUR
         self.forecast: bool = False
+
+        self.dev_api: bool = dev
 
     def set_forecast(self, forecast: bool) -> None:
         """Set if forecast prices should be used."""
@@ -139,10 +141,16 @@ class Stromligning:
     def _get_response(self, path: str) -> dict:
         """Make the request to the API."""
 
-        response = requests.get(
-            f"{API_URL}{path}",
-            timeout=60,
-        )
+        if not self.dev_api:
+            response = requests.get(
+                f"{API_URL}{path}",
+                timeout=60,
+            )
+        else:
+            response = requests.get(
+                f"{DEV_API_URL}{path}",
+                timeout=60,
+            )
 
         if response.status_code != 200:
             if response.status_code == 429:
