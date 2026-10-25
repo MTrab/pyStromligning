@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-
 import logging
+import math
 import sys
 from datetime import datetime, timezone
 from operator import itemgetter
@@ -11,7 +11,7 @@ from operator import itemgetter
 import requests
 
 from .const import API_URL, DEV_API_URL
-from .exceptions import InvalidAPIResponse, TooManyRequests
+from .exceptions import FixedPriceRequired, InvalidAPIResponse, TooManyRequests
 
 if sys.version_info < (3, 11, 0):
     sys.exit("The pyWorxcloud module requires Python 3.11.0 or later")
@@ -56,12 +56,22 @@ class Stromligning:
         self.company: dict = {}
         self.aggregation: str = Aggregation.HOUR
         self.forecast: bool = False
+        self.electricity_price: float | None = None
 
         self.dev_api: bool = dev
 
     def set_forecast(self, forecast: bool) -> None:
         """Set if forecast prices should be used."""
         self.forecast = forecast
+
+    def set_electricity_price(self, price: float | None) -> None:
+        """Set the agreed electricity price in kr/kWh excluding VAT."""
+        if price is not None:
+            if isinstance(price, bool) or not isinstance(price, (int, float)):
+                raise TypeError("Electricity price must be numeric")
+            if not math.isfinite(price) or price < 0:
+                raise ValueError("Electricity price must be finite and non-negative")
+        self.electricity_price = price
 
     def set_aggregation(self, aggregation: Aggregation) -> None:
         """Set aggregation level."""
@@ -101,7 +111,11 @@ class Stromligning:
             company_name = company["name"]
             for product in company["products"]:
                 company_list.append(
-                    {"id": product["id"], "name": f"{company_name} - {product['name']}"}
+                    {
+                        "id": product["id"],
+                        "name": f"{company_name} - {product['name']}",
+                        "productType": product["productType"],
+                    }
                 )
 
         return sorted(company_list, key=itemgetter("name"))
@@ -120,9 +134,20 @@ class Stromligning:
         if self.aggregation != Aggregation.MIN15:
             aggregation = "&aggregation=" + self.aggregation
 
-        url = f"/prices?productId={self.company['id']}&supplierId={self.supplier['id']}&from={start}{aggregation}&forecast={str(self.forecast).lower()}"
+        url = (
+            f"/prices?productId={self.company['id']}"
+            f"&supplierId={self.supplier['id']}&from={start}{aggregation}"
+            f"&forecast={str(self.forecast).lower()}"
+        )
 
-        _LOGGER.debug("Fetching prices from: %s", url)
+        if self.company["productType"] == "fixed":
+            if self.electricity_price is None:
+                raise FixedPriceRequired(
+                    "Set the agreed electricity price before updating"
+                )
+            url += f"&electricityPrice={self.electricity_price}"
+
+        _LOGGER.debug("Fetching electricity prices")
 
         price_list: list = []
         price_list_raw = sorted(

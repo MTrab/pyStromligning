@@ -7,3 +7,7 @@ class InvalidAPIResponse(Exception):
 
 class TooManyRequests(Exception):
     """Too many requests, try again in 15 minutes."""
+
+
+class FixedPriceRequired(InvalidAPIResponse):
+    """A fixed-price product requires the customer's agreed electricity price."""
