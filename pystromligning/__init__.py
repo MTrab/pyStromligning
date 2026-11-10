@@ -30,6 +30,16 @@ except PackageNotFoundError:
     LIBRARY_USER_AGENT = "pystromligning"
 
 
+def _midnight_utc() -> str:
+    """Return local midnight today as a UTC timestamp for the API."""
+    return (
+        datetime.now()
+        .replace(hour=0, minute=0, second=0, microsecond=0)
+        .astimezone(timezone.utc)
+        .isoformat()
+    ).replace("+00:00", ".000Z")
+
+
 class Aggregation(str):
     """Strømligning aggregation levels."""
 
@@ -74,6 +84,7 @@ class Stromligning:
         self.available_companies: list = []
 
         self.prices: list = []
+        self.production_prices: list = []
         self.company: dict = {}
         self.aggregation: str = Aggregation.HOUR
         self.forecast: bool = False
@@ -162,12 +173,7 @@ class Stromligning:
     def update(self, start: str | None = None) -> None:
         """Get current available prices."""
         if start is None:
-            start = (
-                datetime.now()
-                .replace(hour=0, minute=0, second=0, microsecond=0)
-                .astimezone(timezone.utc)
-                .isoformat()
-            ).replace("+00:00", ".000Z")
+            start = _midnight_utc()
 
         aggregation = ""
         if self.aggregation != Aggregation.MIN15:
@@ -201,6 +207,37 @@ class Stromligning:
             price_list.append(price)
 
         self.prices = price_list
+
+    def update_production(self, start: str | None = None) -> None:
+        """Get sale prices for surplus production at the selected grid supplier.
+
+        Prices are spot prices excluding VAT, less the production tariffs from
+        Energinet and the grid supplier. Tariff deductions are negative values.
+        """
+        if start is None:
+            start = _midnight_utc()
+
+        aggregation = ""
+        if self.aggregation != Aggregation.MIN15:
+            aggregation = "&aggregation=" + self.aggregation
+
+        url = (
+            f"/prices/production?supplierId={self.supplier['id']}"
+            f"&from={start}{aggregation}"
+            f"&forecast={str(self.forecast).lower()}"
+        )
+
+        _LOGGER.debug("Fetching production prices")
+
+        price_list: list = []
+        for price in sorted(
+            (self._get_response(url))["prices"],
+            key=itemgetter("date"),
+        ):
+            if price not in price_list:
+                price_list.append(price)
+
+        self.production_prices = price_list
 
     def _get_response(self, path: str) -> dict:
         """Make the request to the API."""
