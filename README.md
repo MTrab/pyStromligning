@@ -17,3 +17,12 @@ Variable products omit `electricityPrice`, even if a price was previously set.
 Use `set_electricity_price(None)` to clear the saved price.
 
 API documentation: https://stromligning.dk/api/docs/
+
+## Production prices
+
+`update_production(start)` fetches sale prices for surplus production (for
+example solar) from `/prices/production` for the grid supplier found by
+`set_location()`, and stores them in `production_prices`. It uses the same
+aggregation and forecast settings as `update()`. Each price is the spot price
+excluding VAT, less Energinet's and the grid supplier's production tariffs; the
+tariff deductions and their VAT are negative values.
