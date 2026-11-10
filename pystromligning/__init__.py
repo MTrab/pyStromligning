@@ -6,17 +6,28 @@ import logging
 import math
 import sys
 from datetime import datetime, timezone
+from importlib.metadata import PackageNotFoundError, version
 from operator import itemgetter
 
 import requests
 
 from .const import API_URL, DEV_API_URL
-from .exceptions import FixedPriceRequired, InvalidAPIResponse, TooManyRequests
+from .exceptions import (
+    FixedPriceRequired,
+    InvalidAPIKey,
+    InvalidAPIResponse,
+    TooManyRequests,
+)
 
 if sys.version_info < (3, 11, 0):
     sys.exit("The pyWorxcloud module requires Python 3.11.0 or later")
 
 _LOGGER = logging.getLogger(__name__)
+
+try:
+    LIBRARY_USER_AGENT = f"pystromligning/{version('pystromligning')}"
+except PackageNotFoundError:
+    LIBRARY_USER_AGENT = "pystromligning"
 
 
 def _midnight_utc() -> str:
@@ -54,8 +65,18 @@ class Stromligning:
     Results are electricity prices that takes into account the tariffs and other fees.
     """
 
-    def __init__(self, dev: bool = False) -> None:
-        """Initialize the :class:Stromligning class and set default attribute values."""
+    def __init__(
+        self,
+        dev: bool = False,
+        api_key: str | None = None,
+        user_agent: str | None = None,
+    ) -> None:
+        """Initialize the :class:Stromligning class and set default attribute values.
+
+        ``user_agent`` identifies the calling application, for example
+        ``"MyApp/1.0"``; the library's own name and version are appended.
+        ``api_key`` is sent as a bearer token when set.
+        """
         _LOGGER.debug("Initializing the pyStromligning library")
         self._location: dict = {}
 
@@ -70,6 +91,24 @@ class Stromligning:
         self.electricity_price: float | None = None
 
         self.dev_api: bool = dev
+        self._api_key: str | None = None
+        self.set_api_key(api_key)
+        self.user_agent: str = (
+            f"{user_agent} {LIBRARY_USER_AGENT}" if user_agent else LIBRARY_USER_AGENT
+        )
+
+    def set_api_key(self, api_key: str | None) -> None:
+        """Set or clear the API key. Empty or blank keys are treated as no key."""
+        if api_key is not None and not isinstance(api_key, str):
+            raise TypeError("API key must be a string")
+        self._api_key = api_key.strip() if api_key and api_key.strip() else None
+
+    def _headers(self) -> dict:
+        """Return request headers; the API key is never logged."""
+        headers = {"User-Agent": self.user_agent}
+        if self._api_key:
+            headers["Authorization"] = f"Bearer {self._api_key}"
+        return headers
 
     def set_forecast(self, forecast: bool) -> None:
         """Set if forecast prices should be used."""
@@ -203,18 +242,17 @@ class Stromligning:
     def _get_response(self, path: str) -> dict:
         """Make the request to the API."""
 
-        if not self.dev_api:
-            response = requests.get(
-                f"{API_URL}{path}",
-                timeout=60,
-            )
-        else:
-            response = requests.get(
-                f"{DEV_API_URL}{path}",
-                timeout=60,
-            )
+        response = requests.get(
+            f"{DEV_API_URL if self.dev_api else API_URL}{path}",
+            headers=self._headers(),
+            timeout=60,
+        )
 
         if response.status_code != 200:
+            if response.status_code == 401:
+                raise InvalidAPIKey(
+                    "The API key was rejected (invalid, deactivated or expired)"
+                )
             if response.status_code == 429:
                 raise TooManyRequests(
                     "Too many requests from this IP, please try again after 15 minutes"
