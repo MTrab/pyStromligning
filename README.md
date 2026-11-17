@@ -27,6 +27,12 @@ aggregation and forecast settings as `update()`. Each price is the spot price
 excluding VAT, less Energinet's and the grid supplier's production tariffs; the
 tariff deductions and their VAT are negative values.
 
+`set_location()` also stores the electricity companies' production agreements
+in `available_production_agreements`, apart from `available_companies`. After
+`set_production_agreement(product_id)` the sale prices are also less that
+company's deduction, given in `details.surcharge`. Use
+`set_production_agreement(None)` to leave it out again.
+
 ## User-Agent and API key
 
 `Stromligning(dev=False, api_key=None, user_agent=None)`:
