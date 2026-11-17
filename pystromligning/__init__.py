@@ -82,10 +82,12 @@ class Stromligning:
 
         self.supplier: dict = {}
         self.available_companies: list = []
+        self.available_production_agreements: list = []
 
         self.prices: list = []
         self.production_prices: list = []
         self.company: dict = {}
+        self.production_agreement: dict = {}
         self.aggregation: str = Aggregation.HOUR
         self.forecast: bool = False
         self.electricity_price: float | None = None
@@ -143,6 +145,14 @@ class Stromligning:
             else:
                 self.company = {}
 
+    def set_production_agreement(self, product_id: str | None) -> None:
+        """Set or clear the agreement that buys the surplus production."""
+        self.production_agreement = {}
+        for agreement in self.available_production_agreements:
+            if agreement["id"] == product_id:
+                self.production_agreement = agreement
+                break
+
     def _get_supplier(self) -> dict:
         """Get the supplier for the provided location."""
         return (
@@ -152,9 +162,13 @@ class Stromligning:
         )[0]
 
     def _get_companies(self) -> list:
-        """Get a list of available electricity companies for the location."""
+        """Get a list of available electricity companies for the location.
+
+        Production agreements, which buy surplus production, are kept apart in
+        ``available_production_agreements``.
+        """
         companies = self._get_response(
-            f"/companies?region={self.supplier['priceArea']}"
+            f"/companies?region={self.supplier['priceArea']}&includeProduction=true"
         )
         company_list: list = []
         for company in companies:
@@ -168,7 +182,17 @@ class Stromligning:
                     }
                 )
 
-        return sorted(company_list, key=itemgetter("name"))
+        company_list.sort(key=itemgetter("name"))
+        self.available_production_agreements = [
+            product
+            for product in company_list
+            if product["productType"] == "production"
+        ]
+        return [
+            product
+            for product in company_list
+            if product["productType"] != "production"
+        ]
 
     def update(self, start: str | None = None) -> None:
         """Get current available prices."""
@@ -213,6 +237,8 @@ class Stromligning:
 
         Prices are spot prices excluding VAT, less the production tariffs from
         Energinet and the grid supplier. Tariff deductions are negative values.
+        With a production agreement set, the electricity company's deduction
+        is taken off as well.
         """
         if start is None:
             start = _midnight_utc()
@@ -226,6 +252,9 @@ class Stromligning:
             f"&from={start}{aggregation}"
             f"&forecast={str(self.forecast).lower()}"
         )
+
+        if self.production_agreement:
+            url += f"&productId={self.production_agreement['id']}"
 
         _LOGGER.debug("Fetching production prices")
 
